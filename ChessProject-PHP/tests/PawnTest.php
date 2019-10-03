@@ -3,60 +3,111 @@
 namespace SolarWinds\Chess;
 
 use SolarWinds\Chess\ChessBoard;
-use SolarWinds\Chess\MovementTypeEnum;
-use SolarWinds\Chess\Pawn;
-use SolarWinds\Chess\PieceColorEnum;
-
+use SolarWinds\Chess\Pieces\Pawn;
+use SolarWinds\Chess\Settings\PieceColorEnum;
+use SolarWinds\Chess\Settings\ChessBoardSettings;
 
 class PawnTest extends \PHPUnit_Framework_TestCase
 {
 
     /** @var  ChessBoard */
     private $_chessBoard;
-    /** @var  Pawn */
-    private $_testSubject;
 
     protected function setUp()
     {
-        $this->_chessBoard = new ChessBoard();
-        $this->_testSubject = new Pawn(PieceColorEnum::WHITE());
-
+        $ChessBoardSettings = new ChessBoardSettings;
+        $this->_chessBoard = new ChessBoard($ChessBoardSettings, PieceColorEnum::WHITE());
     }
 
-    public function testChessBoard_Add_Sets_XCoordinate()
+    /**
+     * Test to move 1 and 2 steps forward WITHOUT OBSTACLE pieces on the way.
+     * NOTE: Assert the new coordinates.
+     *
+     * @dataProvider moveToAllowedCellProvider
+     */
+    public function testMoveToAllowedCell($xCoordinate, $yCoordinate, $newX, $newY, $PieceColorEnum)
     {
-        $this->_chessBoard->add($this->_testSubject, 6, 3, PieceColorEnum::BLACK());
-        $this->assertEquals(6, $this->_testSubject->getXCoordinate());
+        $_testSubject = new Pawn($PieceColorEnum);
+
+        $_testSubject->setXCoordinate($xCoordinate);
+        $_testSubject->setYCoordinate($yCoordinate);
+
+        $this->_chessBoard->setPieceToCell($_testSubject);
+
+        $_testSubject->setChessBoard($this->_chessBoard);
+        $_testSubject->move($newX, $newY);
+
+        $this->assertEquals($newX, $_testSubject->getXCoordinate());
+        $this->assertEquals($newY, $_testSubject->getYCoordinate());
     }
 
-    public function testChessBoard_Add_Sets_YCoordinate()
+    /**
+     * Test to move 1 and 2 steps forward WITH OBSTACLE pieces on the way.
+     * NOTE: Assert the old coordinates (The obstacle prevents the movement).
+     *
+     * @dataProvider moveToAllowedCellProvider
+     */
+    public function testMoveToAllowedCellWithObstacle($xCoordinate, $yCoordinate, $newX, $newY, $PieceColorEnum)
     {
-        $this->_chessBoard->add($this->_testSubject, 6, 3, PieceColorEnum::BLACK());
-        $this->assertEquals(3, $this->_testSubject->getXCoordinate());
+        $_testSubject = new Pawn($PieceColorEnum);
+
+        // Set an obstacle piece:
+        $_testSubject->setXCoordinate($newX);
+        $_testSubject->setYCoordinate($newY);
+        $this->_chessBoard->setPieceToCell($_testSubject);
+
+        // Set the test piece:
+        $_testSubject->setXCoordinate($xCoordinate);
+        $_testSubject->setYCoordinate($yCoordinate);
+        $this->_chessBoard->setPieceToCell($_testSubject);
+
+        $_testSubject->setChessBoard($this->_chessBoard);
+        $_testSubject->move($newX, $newY);
+
+        $this->assertEquals($xCoordinate, $_testSubject->getXCoordinate());
+        $this->assertEquals($yCoordinate, $_testSubject->getYCoordinate());
     }
 
-    public function testPawn_Move_IllegalCoordinates_Right_DoesNotMove()
+    public function moveToAllowedCellProvider()
     {
-        $this->_chessBoard->add($this->_testSubject, 6, 3, PieceColorEnum::BLACK());
-        $this->_testSubject->move(MovementTypeEnum::MOVE(), 7, 3);
-        $this->assertEquals(6, $this->_testSubject->getXCoordinate());
-        $this->assertEquals(3, $this->_testSubject->getYCoordinate());
+        return [
+            [0,1,0,2,PieceColorEnum::WHITE()], // White step one field forward.
+            [1,1,1,3,PieceColorEnum::WHITE()], // White step two fields forward.
+            [0,6,0,5,PieceColorEnum::BLACK()], // Black step one field forward.
+            [1,6,1,4,PieceColorEnum::BLACK()], // Black step two fields forward.
+        ];
     }
 
-    public function testPawn_Move_IllegalCoordinates_Left_DoesNotMove()
+    /**
+     * Test to forbiden cells.
+     * NOTE: Assert the old coordinates.
+     *
+     * @dataProvider moveToForbidenCellProvider
+     */
+    public function testMoveToForbidenCell($xCoordinate, $yCoordinate, $newX, $newY, $PieceColorEnum)
     {
-        $this->_chessBoard->add($this->_testSubject, 6, 3, PieceColorEnum::BLACK());
-        $this->_testSubject->move(MovementTypeEnum::MOVE(), 4, 3);
-        $this->assertEquals(6, $this->_testSubject->getXCoordinate());
-        $this->assertEquals(3, $this->_testSubject->getYCoordinate());
+        $_testSubject = new Pawn($PieceColorEnum);
+
+        $_testSubject->setXCoordinate($xCoordinate);
+        $_testSubject->setYCoordinate($yCoordinate);
+
+        $this->_chessBoard->setPieceToCell($_testSubject);
+
+        $_testSubject->setChessBoard($this->_chessBoard);
+        $_testSubject->move($newX, $newY);
+
+        $this->assertEquals($xCoordinate, $_testSubject->getXCoordinate());
+        $this->assertEquals($yCoordinate, $_testSubject->getYCoordinate());
     }
 
-    public function testPawn_Move_LegalCoordinates_Forward_UpdatesCoordinates()
+    public function moveToForbidenCellProvider()
     {
-        $this->_chessBoard->add($this->_testSubject, 6, 3, PieceColorEnum::BLACK());
-        $this->_testSubject->move(MovementTypeEnum::MOVE(), 6, 2);
-        $this->assertEquals(6, $this->_testSubject->getXCoordinate());
-        $this->assertEquals(2, $this->_testSubject->getYCoordinate());
+        return [
+            [0,1,1,5,PieceColorEnum::WHITE()],
+            [1,1,1,6,PieceColorEnum::WHITE()],
+            [0,6,4,6,PieceColorEnum::BLACK()],
+            [1,6,2,5,PieceColorEnum::BLACK()],
+        ];
     }
 
 }
